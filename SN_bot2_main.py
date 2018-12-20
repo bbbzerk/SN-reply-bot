@@ -1,9 +1,6 @@
 from slackeventsapi import SlackEventAdapter
 from slackclient import SlackClient
-import sn_rest_api
-import json
-import os
-import re
+import sn_rest_api, json, os, re
 
 # Import environmental variables that contain
 # the bot token and signing secret.
@@ -21,23 +18,14 @@ def handle_message(event_data):
     text = str(message.get('text'))
     match = matchText(text)
     matchLen = len(match)
+
+    # subtype none prevents the system from responding to the bot's message events
     if message.get("subtype") is None and matchLen > 0:
         if matchLen == 1:
                 number = str(match[0])
-                print('Entered if statement for matchLen == 1')
                 snTable = setTable(match[0])
-                print()
-                print('SN Table: ' + snTable)
-                print()
-                print('Number: ' + number)
                 response = sn_rest_api.formatReturn(sn_rest_api.getRecord(snTable,number))
-                print()
-                print("Response: ")
-                #print(response)
                 strText = sn_rest_api.printMyRecord(response)
-                print()
-                print('Formatted String Text: ' + strText)
-                
                 button = [
                         {
                                 "fallback": "Open record " + str(match[0]),
@@ -49,22 +37,29 @@ def handle_message(event_data):
                                         }
                                 ]
                         }
-                ]
-                
-        
-                
+                ]       
+
+                # Make slack api call postMessage with above information     
                 slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button)
 
-        else:
-                for index in match:
-                        myMessage += str(match[index]) + ' '
-
-                channel = message["channel"]
-        #send_message = "Responding to recognized message sent by user <@%s>." % message["user"]
-        #send_message += "You said: " + myMessage
-        #slack_client.api_call("chat.postMessage", channel=channel, text=send_message)
-        
-
+        elif message.get("subtype") is None and matchLen > 1:
+                for textMatch in match:
+                        number = str(textMatch)
+                        snTable = setTable(textMatch)
+                        response = sn_rest_api.formatReturn(sn_rest_api.getRecord(snTable,number))
+                        strText = sn_rest_api.printMyRecord(response)
+                        button = [{
+                                "fallback": "Open record " + number,
+                                "actions": [
+                                        {
+                                                "type": "button",
+                                                "text": "🎫 " + number,
+                                                "url": str(response["link"])
+                                        }
+                                ]
+                        }]
+                        # Make slack api call postMessage with above information for each record in match array
+                        slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button)
 
 '''Matches the ServiceNow regex patten agains the string paramter
 
