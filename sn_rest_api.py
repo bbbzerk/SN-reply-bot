@@ -62,7 +62,7 @@ def formatReturn(jsonData):
 
     # Build JSON to return
     theReturn = {}
-    theReturn['button'] = "🎫 " + str(recordLink)
+    theReturn['button'] = ":ticket: " + str(recordLink)
     theReturn['number'] = number
     theReturn['shortDesc'] = shortDesc
     theReturn['link'] = recordLink

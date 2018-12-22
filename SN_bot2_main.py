@@ -18,6 +18,7 @@ def handle_message(event_data):
     text = str(message.get('text'))
     match = matchText(text)
     matchLen = len(match)
+    print('Subtype: ' + str(message.get("subtype")))
 
     # subtype none prevents the system from responding to the bot's message events
     if message.get("subtype") is None and matchLen > 0:
