@@ -25,51 +25,74 @@ headers = {"Content-Type":"application/json","Accept":"application/json"}
 @returns: JSON object containing relevant information about the record.
 '''
 def formatReturn(jsonData):
-    myData = jsonData['result'][0]
-    number = myData['number']
-    shortDesc = myData['short_description']
-    #desc = myData['description']
-    #state = myData['state']
-    sysClass = myData['sys_class_name']
-    sysId = myData['sys_id']
-    theUser = ''
-    
-    # Get user's name (caller, requested for)
-    if sysClass == 'incident':
-        caller_id_link = myData['caller_id']['link']
-        theCallerRaw = requests.get(caller_id_link, auth=(user,pwd), headers=headers)
-        if theCallerRaw.status_code != 200:
-            theUser = ''
-        else:
-            theCallerData = theCallerRaw.json()
-            theUser = theCallerData['result']['name']
-    elif sysClass == 'sc_task':
-        request_link = myData['request']['link']
-        requestRaw = requests.get(request_link, auth=(user,pwd), headers=headers)
-        if requestRaw.status_code != 200:
-            theUser = ''
-        else:
-            requestData = requestRaw.json()
-            requested_for_link = requestData['result']['requested_for']['link']
+
+    # Need to make sure it's a good result from SN and return error: False
+    if len(jsonData['result']) > 0:
+        myData = jsonData['result'][0]
+        number = myData['number']
+        shortDesc = myData['short_description']
+        sysClass = myData['sys_class_name']
+        sysId = myData['sys_id']
+        theUser = ''
+        
+        # Get user's name (caller or requested for)
+        if sysClass == 'incident':
+            caller_id_link = myData['caller_id']['link']
+            theCallerRaw = requests.get(caller_id_link, auth=(user,pwd), headers=headers)
+            if theCallerRaw.status_code != 200:
+                theUser = ''
+            else:
+                theCallerData = theCallerRaw.json()
+                theUser = theCallerData['result']['name']
+
+        elif sysClass == 'sc_task' or sysClass == 'sc_req_item':
+            request_link = myData['request']['link']
+            requestRaw = requests.get(request_link, auth=(user,pwd), headers=headers)
+            if requestRaw.status_code != 200:
+                theUser = ''
+            else:
+                requestData = requestRaw.json()
+                requested_for_link = requestData['result']['requested_for']['link']
+                requested_for_raw = requests.get(requested_for_link, auth=(user,pwd), headers=headers)
+                if requested_for_raw.status_code != 200:
+                    theUser = ''
+                else:
+                    requested_for_data = requested_for_raw.json()
+                    theUser = requested_for_data['result']['name']
+
+        elif sysClass == 'sc_request':
+            requested_for_link = myData['requested_for']['link']
             requested_for_raw = requests.get(requested_for_link, auth=(user,pwd), headers=headers)
             if requested_for_raw.status_code != 200:
                 theUser = ''
             else:
                 requested_for_data = requested_for_raw.json()
                 theUser = requested_for_data['result']['name']
-    
-    recordLink = "https://" + instance + ".service-now.com/nav_to.do?uri=%2F" + sysClass + ".do%3Fsys_id%3D" + sysId
+        
+        recordLink = "https://" + instance + ".service-now.com/nav_to.do?uri=%2F" + sysClass + ".do%3Fsys_id%3D" + sysId
 
-    # Build JSON to return
-    theReturn = {}
-    theReturn['button'] = ":ticket: " + str(recordLink)
-    theReturn['number'] = number
-    theReturn['shortDesc'] = shortDesc
-    theReturn['link'] = recordLink
-    if (theUser):
-        theReturn['user'] = theUser
+        # Build JSON to return
+        theReturn = {}
+        theReturn['error'] = False
+        theReturn['number'] = number
+        if (shortDesc):
+            theReturn['shortDesc'] = shortDesc
+        else:
+            theReturn['shortDesc'] = ''
+        theReturn['link'] = recordLink
+        if (theUser):
+            theReturn['user'] = theUser
+        else:
+            theReturn['user'] = ''
 
-    return theReturn
+        return theReturn
+
+    # Otherwise there was no match, return error: True
+    else:
+        theReturn = {}
+        theReturn['error'] = True
+
+        return theReturn
 
 
 '''Builds a string of the JSON object info that looks nice.
@@ -82,10 +105,10 @@ def formatReturn(jsonData):
 def printMyRecord(jsonRecord):
     printStr = ''
     printStr += '*Number:* ' + jsonRecord['number'] + '\n'
-    printStr += '*Short Description:* ' + jsonRecord['shortDesc'] + '\n'
+    if jsonRecord['shortDesc']:
+        printStr += '*Short Description:* ' + jsonRecord['shortDesc'] + '\n'
     if jsonRecord['user']:
         printStr += '*User:* ' + jsonRecord['user'] + '\n'
-    #printStr += jsonRecord['link']
     return printStr
 
 
@@ -102,8 +125,12 @@ def getRecord(table, number):
 
 # TESTING!!
 # Test the method by calling with test data
-#response = getRecord('incident','INC0010003')
+#response = getRecord('sc_req_item','RITM0010002')
 # Decode the JSON response into a dictionary and use the data
 #data = response.json()
 #print(formatReturn(data))
-#print(printMyRecord(formatReturn(getRecord('incident','INC0010003'))))
+#print(getRecord('sc_req_item','RITM0010002'))
+#print()
+#print()
+#print(formatReturn(getRecord('sc_req_item','RITM0010002')))
+#print(printMyRecord(formatReturn(getRecord('sc_req_item','RITM0010002'))))

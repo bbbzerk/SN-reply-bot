@@ -13,54 +13,61 @@ slack_client = SlackClient(token)
 # Event handling for receiving a message event from Slack.
 @slack_events_adapter.on("message")
 def handle_message(event_data):
-    message = event_data["event"]
-    channel = message["channel"]
-    text = str(message.get('text'))
-    match = matchText(text)
-    matchLen = len(match)
-    print('Subtype: ' + str(message.get("subtype")))
+        message = event_data["event"]
+        channel = message["channel"]
+        text = str(message.get('text'))
+        match = matchText(text)
+        matchLen = len(match)
 
-    # subtype none prevents the system from responding to the bot's message events
-    if message.get("subtype") is None and matchLen > 0:
-        if matchLen == 1:
-                number = str(match[0])
-                snTable = setTable(match[0])
-                response = sn_rest_api.formatReturn(sn_rest_api.getRecord(snTable,number))
-                strText = sn_rest_api.printMyRecord(response)
-                button = [
-                        {
-                                "fallback": "Open record " + str(match[0]),
-                                "actions": [
-                                        {
-                                                "type": "button",
-                                                "text": "🎫 " + str(match[0]),
-                                                "url": str(response["link"])
-                                        }
-                                ]
-                        }
-                ]       
+        # If message in a thread, reply to that thread
+        myThread = ''
+        if message.get('thread_ts') is not None:
+                myThread = message['thread_ts']
 
-                # Make slack api call postMessage with above information     
-                slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button)
-
-        elif message.get("subtype") is None and matchLen > 1:
-                for textMatch in match:
-                        number = str(textMatch)
-                        snTable = setTable(textMatch)
+        # subtype none prevents the system from responding to the bot's message events
+        if message.get("subtype") is None and matchLen > 0:
+                if matchLen == 1:
+                        number = str(match[0])
+                        snTable = setTable(match[0])
                         response = sn_rest_api.formatReturn(sn_rest_api.getRecord(snTable,number))
-                        strText = sn_rest_api.printMyRecord(response)
-                        button = [{
-                                "fallback": "Open record " + number,
-                                "actions": [
-                                        {
-                                                "type": "button",
-                                                "text": "🎫 " + number,
-                                                "url": str(response["link"])
-                                        }
-                                ]
-                        }]
-                        # Make slack api call postMessage with above information for each record in match array
-                        slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button)
+                        
+                        # If SN returns a good record, print it to Slack
+                        if response['error'] == False:
+                                strText = sn_rest_api.printMyRecord(response)
+                                button = [{
+                                                "fallback": "Open record " + str(match[0]),
+                                                "actions": [{
+                                                                "type": "button",
+                                                                "text": "🎫 " + str(match[0]),
+                                                                "url": str(response["link"])
+                                                        }]
+                                        }]       
+
+                                # Make slack api call postMessage with above information     
+                                slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button, thread_ts=myThread)
+                        
+                        #Otherwise if SN returns no record, print to Slack no record found
+                        elif response['error'] == True:
+                                strText = "No results for record: *" + number + "*."
+                                slack_client.api_call("chat.postMessage", channel=channel, text=strText, thread_ts=myThread)
+
+
+                elif message.get("subtype") is None and matchLen > 1:
+                        for textMatch in match:
+                                number = str(textMatch)
+                                snTable = setTable(textMatch)
+                                response = sn_rest_api.formatReturn(sn_rest_api.getRecord(snTable,number))
+                                strText = sn_rest_api.printMyRecord(response)
+                                button = [{
+                                        "fallback": "Open record " + number,
+                                        "actions": [{
+                                                        "type": "button",
+                                                        "text": "🎫 " + number,
+                                                        "url": str(response["link"])
+                                                }]
+                                }]
+                                # Make slack api call postMessage with above information for each record in match array
+                                slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button, thread_ts=myThread)
 
 '''Matches the ServiceNow regex patten agains the string paramter
 
