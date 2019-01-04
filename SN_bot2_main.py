@@ -38,12 +38,12 @@ def handle_message(event_data):
                                                 "fallback": "Open record " + str(match[0]),
                                                 "actions": [{
                                                                 "type": "button",
-                                                                "text": "🎫 " + str(match[0]),
+                                                                "text": response['ticketIcon'] + str(match[0]),
                                                                 "url": str(response["link"])
                                                         }]
-                                        }]       
+                                        }]
 
-                                # Make slack api call postMessage with above information     
+                                # Make slack api call postMessage with above information
                                 slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button, thread_ts=myThread)
                         
                         #Otherwise if SN returns no record, print to Slack no record found
@@ -69,6 +69,7 @@ def handle_message(event_data):
                                 # Make slack api call postMessage with above information for each record in match array
                                 slack_client.api_call("chat.postMessage", channel=channel, text=strText, attachments=button, thread_ts=myThread)
 
+
 '''Matches the ServiceNow regex patten agains the string paramter
 
 @params: string to match
@@ -77,6 +78,7 @@ def handle_message(event_data):
 '''
 def matchText(str):
         return re.findall(r'INC\d{7}|REQ\d{7}|RITM\d{7}|SCTASK\d{7}|KB\d{7}', str)
+
 
 '''Takes an input and defines a SN table based on that text.
 

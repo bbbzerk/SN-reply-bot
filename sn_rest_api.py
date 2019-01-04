@@ -34,9 +34,11 @@ def formatReturn(jsonData):
         sysClass = myData['sys_class_name']
         sysId = myData['sys_id']
         theUser = ''
+        ticketIcon = ''
         
         # Get user's name (caller or requested for)
         if sysClass == 'incident':
+            ticketIcon = ':ticket: '
             caller_id_link = myData['caller_id']['link']
             theCallerRaw = requests.get(caller_id_link, auth=(user,pwd), headers=headers)
             if theCallerRaw.status_code != 200:
@@ -46,6 +48,7 @@ def formatReturn(jsonData):
                 theUser = theCallerData['result']['name']
 
         elif sysClass == 'sc_task' or sysClass == 'sc_req_item':
+            ticketIcon = ':shopping_trolley: '
             request_link = myData['request']['link']
             requestRaw = requests.get(request_link, auth=(user,pwd), headers=headers)
             if requestRaw.status_code != 200:
@@ -61,6 +64,7 @@ def formatReturn(jsonData):
                     theUser = requested_for_data['result']['name']
 
         elif sysClass == 'sc_request':
+            ticketIcon = ':shopping_trolley: '
             requested_for_link = myData['requested_for']['link']
             requested_for_raw = requests.get(requested_for_link, auth=(user,pwd), headers=headers)
             if requested_for_raw.status_code != 200:
@@ -68,13 +72,20 @@ def formatReturn(jsonData):
             else:
                 requested_for_data = requested_for_raw.json()
                 theUser = requested_for_data['result']['name']
+
+        elif sysClass == 'kb_knowledge':
+            ticketIcon = ':book: '
         
-        recordLink = "https://" + instance + ".service-now.com/nav_to.do?uri=%2F" + sysClass + ".do%3Fsys_id%3D" + sysId
+        if sysClass == 'kb_knowledge':
+            recordLink = "https://" + instance + ".service-now.com/kb_view.do?sysparm_article=" + number
+        else:
+            recordLink = "https://" + instance + ".service-now.com/nav_to.do?uri=%2F" + sysClass + ".do%3Fsys_id%3D" + sysId
 
         # Build JSON to return
         theReturn = {}
         theReturn['error'] = False
         theReturn['number'] = number
+        theReturn['ticketIcon'] = ticketIcon
         if (shortDesc):
             theReturn['shortDesc'] = shortDesc
         else:
