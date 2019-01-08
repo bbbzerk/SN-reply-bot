@@ -132,16 +132,3 @@ def getRecord(table, number):
     myTable = str(table)
     myNumber = str(number)
     return requests.get(url + myTable + '?sysparm_query=number%3D' + myNumber, auth=(user, pwd), headers=headers).json()
-
-
-# TESTING!!
-# Test the method by calling with test data
-#response = getRecord('sc_req_item','RITM0010002')
-# Decode the JSON response into a dictionary and use the data
-#data = response.json()
-#print(formatReturn(data))
-#print(getRecord('sc_req_item','RITM0010002'))
-#print()
-#print()
-#print(formatReturn(getRecord('sc_req_item','RITM0010002')))
-#print(printMyRecord(formatReturn(getRecord('sc_req_item','RITM0010002'))))
